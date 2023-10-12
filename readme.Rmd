@@ -29,36 +29,23 @@ con <- DBI::dbConnect(odbc(),
                       Port = 3306, 
                       Database = "ChicagoCrime")
 
-dbListFields(con, "wards")
-
 dbListFields(con, "crimes")
 
 select_q <- dbSendQuery(
   conn = con, 
-  statement = "SELECT ward, percentIncomeUnder25K FROM wards"
+  statement = "SELECT * from crimes"
 )
 
 select_res <- dbFetch(select_q)
 
 dbClearResult(select_q)
 
-# Rocking with over 2 million rows in crimes
-
-select_q <- dbSendQuery(
+selected <- dbSendQuery(
   conn = con, 
-  statement = "SELECT id, ward, locationType, arrest 
-  FROM crimes WHERE arrest='TRUE' AND locationType='RESIDENCE'"
+  statement = "SELECT * from crimes"
 )
 
-select_res <- dbFetch(select_q)
-
-# Now we are down to under 45K!
-
-dbClearResult(select_q)
-
-
-
-dbClearResult(select_q)
+crime <- dbFetch(selected)
 ```
 
 ## Question 1 
@@ -74,6 +61,7 @@ crime_count_by_ward <- aggregate(id ~ ward, select_res, length)
 colnames(crime_count_by_ward) <- c("ward", "count")
 crime_count_by_ward <- crime_count_by_ward[order(crime_count_by_ward$count), ]
 top_10_safest_wards <- tail(crime_count_by_ward, 10)
+
 ggplot(top_10_safest_wards, aes(x=reorder(ward, -count), y=count, fill=ward)) +
   geom_bar(stat="identity", color="black") +  
   coord_flip() +
@@ -82,5 +70,38 @@ ggplot(top_10_safest_wards, aes(x=reorder(ward, -count), y=count, fill=ward)) +
        y="Number of Crimes") +
   theme_minimal() +  
   theme(legend.position="none")
+```
+##Question 2
+```{r}
+
+library(tidyverse)
+library(data.table)
+library(ggplot2)
+
+crime_dt <- as.data.table(select_res)
+
+str(crime_dt)
+
+
+safe_district <- crime_dt[, list(crimes_committed = sum(table(id)), list(district_longitude = mean(longitude, na.rm = TRUE)), list(district_latitude = mean(latitude, na.rm = TRUE)) 
+                 ), 
+          by = ward][
+            order(desc(crimes_committed))
+          ]
+
+safe_district$V2 <- as.numeric(safe_district$V2)
+safe_district$V3 <- as.numeric(safe_district$V3)
+
+library(leaflet)
+leaflet(safe_district) %>%
+  addTiles() %>%
+  addCircleMarkers(
+    lng = ~V2,
+    lat = ~V3,
+    radius = ~ crimes_committed/8200,
+    stroke = FALSE,
+    fillOpacity = 0.4,
+    popup = ~paste("ward: ", ward, "<br>Crime Committed: ", crimes_committed)
+  )
 ```
 
