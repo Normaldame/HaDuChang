@@ -7,13 +7,11 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## GitHub Documents
 
-This is an R Markdown format used for publishing markdown documents to GitHub. When you click the **Knit** button all R code chunks are run and a markdown file (.md) suitable for publishing to GitHub is generated.
 
-## Including Code
+## Connect SQL and R
 
-You can include R code in the document as follows:
+we select crime data frame from ChicagoCrime.
 
 ```{r cars}
 library(dplyr)
@@ -58,29 +56,31 @@ select_res <- dbFetch(select_q)
 
 dbClearResult(select_q)
 
-longer_statement <- "
-SELECT locationType, COUNT(*) AS 'count'
-FROM crimes 
-GROUP BY locationType
-ORDER BY count DESC
-"
 
-my_query <- gsub("\\n|\\s+", " ", longer_statement)
-
-select_q <- dbSendQuery(conn = con, 
-                        statement = my_query)
-
-select_res <- dbFetch(select_q)
 
 dbClearResult(select_q)
 ```
 
-## Including Plots
+## Question 1 
 
-You can also embed plots, for example:
+We all know Chicago is a dangerous city, depends on that, we can to discover which ward Chicago will have lowest crime happen. So that people can choose these ward for visit or travel. 
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+library(ggplot2)
+
+
+
+crime_count_by_ward <- aggregate(id ~ ward, select_res, length)
+colnames(crime_count_by_ward) <- c("ward", "count")
+crime_count_by_ward <- crime_count_by_ward[order(crime_count_by_ward$count), ]
+top_10_safest_wards <- tail(crime_count_by_ward, 10)
+ggplot(top_10_safest_wards, aes(x=reorder(ward, -count), y=count, fill=ward)) +
+  geom_bar(stat="identity", color="black") +  
+  coord_flip() +
+  labs(title="Top 10 Safest Wards in Chicago",
+       x="Ward",
+       y="Number of Crimes") +
+  theme_minimal() +  
+  theme(legend.position="none")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
