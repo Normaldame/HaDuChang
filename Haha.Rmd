@@ -1,0 +1,86 @@
+---
+title: "Untitled"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## GitHub Documents
+
+This is an R Markdown format used for publishing markdown documents to GitHub. When you click the **Knit** button all R code chunks are run and a markdown file (.md) suitable for publishing to GitHub is generated.
+
+## Including Code
+
+You can include R code in the document as follows:
+
+```{r cars}
+library(dplyr)
+library(DBI)
+library(dbplyr)
+library(odbc)
+
+odbcListDrivers()
+
+con <- DBI::dbConnect(odbc(),
+                      Driver = "SQL Server",
+                      Server = "mcobsql.business.nd.edu",
+                      UID = "MSBAstudent",
+                      PWD = "SQL%database!Mendoza",
+                      Port = 3306, 
+                      Database = "ChicagoCrime")
+
+dbListFields(con, "wards")
+
+dbListFields(con, "crimes")
+
+select_q <- dbSendQuery(
+  conn = con, 
+  statement = "SELECT ward, percentIncomeUnder25K FROM wards"
+)
+
+select_res <- dbFetch(select_q)
+
+dbClearResult(select_q)
+
+# Rocking with over 2 million rows in crimes
+
+select_q <- dbSendQuery(
+  conn = con, 
+  statement = "SELECT id, ward, locationType, arrest 
+  FROM crimes WHERE arrest='TRUE' AND locationType='RESIDENCE'"
+)
+
+select_res <- dbFetch(select_q)
+
+# Now we are down to under 45K!
+
+dbClearResult(select_q)
+
+longer_statement <- "
+SELECT locationType, COUNT(*) AS 'count'
+FROM crimes 
+GROUP BY locationType
+ORDER BY count DESC
+"
+
+my_query <- gsub("\\n|\\s+", " ", longer_statement)
+
+select_q <- dbSendQuery(conn = con, 
+                        statement = my_query)
+
+select_res <- dbFetch(select_q)
+
+dbClearResult(select_q)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
