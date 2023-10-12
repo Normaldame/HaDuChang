@@ -13,13 +13,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 we select crime data frame from ChicagoCrime.
 
-```{r cars}
+```{r, eval = FALSE}
 library(dplyr)
 library(DBI)
 library(dbplyr)
 library(odbc)
 
-odbcListDrivers()
+# odbcListDrivers()
 
 con <- DBI::dbConnect(odbc(),
                       Driver = "SQL Server",
@@ -29,16 +29,16 @@ con <- DBI::dbConnect(odbc(),
                       Port = 3306, 
                       Database = "ChicagoCrime")
 
-dbListFields(con, "crimes")
+# dbListFields(con, "crimes")
 
-select_q <- dbSendQuery(
-  conn = con, 
-  statement = "SELECT * from crimes"
-)
-
-select_res <- dbFetch(select_q)
-
-dbClearResult(select_q)
+# select_q <- dbSendQuery(
+#   conn = con, 
+#   statement = "SELECT * from crimes"
+# )
+# 
+# select_res <- dbFetch(select_q)
+# 
+# dbClearResult(select_q)
 
 selected <- dbSendQuery(
   conn = con, 
@@ -54,9 +54,7 @@ We all know Chicago is a dangerous city, depends on that, we can to discover whi
 
 ```{r pressure, echo=FALSE}
 library(ggplot2)
-
-
-
+load("data/chicago_crime.RData")
 crime_count_by_ward <- aggregate(id ~ ward, select_res, length)
 colnames(crime_count_by_ward) <- c("ward", "count")
 crime_count_by_ward <- crime_count_by_ward[order(crime_count_by_ward$count), ]
@@ -71,37 +69,5 @@ ggplot(top_10_safest_wards, aes(x=reorder(ward, -count), y=count, fill=ward)) +
   theme_minimal() +  
   theme(legend.position="none")
 ```
-##Question 2
-```{r}
 
-library(tidyverse)
-library(data.table)
-library(ggplot2)
-
-crime_dt <- as.data.table(select_res)
-
-str(crime_dt)
-
-
-safe_district <- crime_dt[, list(crimes_committed = sum(table(id)), list(district_longitude = mean(longitude, na.rm = TRUE)), list(district_latitude = mean(latitude, na.rm = TRUE)) 
-                 ), 
-          by = ward][
-            order(desc(crimes_committed))
-          ]
-
-safe_district$V2 <- as.numeric(safe_district$V2)
-safe_district$V3 <- as.numeric(safe_district$V3)
-
-library(leaflet)
-leaflet(safe_district) %>%
-  addTiles() %>%
-  addCircleMarkers(
-    lng = ~V2,
-    lat = ~V3,
-    radius = ~ crimes_committed/8200,
-    stroke = FALSE,
-    fillOpacity = 0.4,
-    popup = ~paste("ward: ", ward, "<br>Crime Committed: ", crimes_committed)
-  )
-```
 
